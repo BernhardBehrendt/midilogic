@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+@plugin "daisyui" {
+  themes:
+    cupcake --default,
+    dark --prefersdark;
+}

@@ -1,0 +1,106 @@
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="card-title text-lg">
+        <i class="bi bi-sliders w-5 h-5"></i>
+        Control Configuration
+      </h3>
+
+      @if (showDelete()) {
+        <button class="btn btn-sm btn-error btn-outline"
+                (click)="deleteInstance()"
+                title="Delete this control configuration">
+          <i class="bi bi-trash w-4 h-4"></i>
+        </button>
+      }
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Control Parameter -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Parameter (CC#)</span>
+        </label>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2">
+            <input type="number"
+                   class="input input-bordered flex-1"
+                   min="0" max="127"
+                   [value]="controlParameter()"
+                   (input)="setControlParameter(+$any($event.target).value)">
+            <span class="text-sm opacity-70">(0-127)</span>
+          </div>
+
+          <!-- Quick select common controllers -->
+          <select class="select select-bordered select-sm w-full"
+                  (change)="selectCommonController(+$any($event.target).value); $any($event.target).selectedIndex = 0">
+            <option disabled selected>Quick Select...</option>
+            @for (controller of commonControllers; track controller.value) {
+              <option [value]="controller.value">{{ controller.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Control Value -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Value</span>
+        </label>
+        <div class="flex items-center gap-2">
+          <input type="range"
+                 class="range range-secondary flex-1"
+                 min="0" max="127"
+                 [value]="controlValue()"
+                 (input)="setControlValue(+$any($event.target).value)">
+          <div class="badge badge-secondary min-w-[3rem]">{{ controlValue() }}</div>
+        </div>
+      </div>
+
+      <!-- MIDI Channel -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Channel</span>
+        </label>
+        <div class="flex items-center gap-2">
+          <input type="number"
+                 class="input input-bordered w-20"
+                 min="1" max="16"
+                 [value]="controlChannel() + 1"
+                 (input)="setControlChannel(+$any($event.target).value - 1)">
+          <span class="text-sm opacity-70">(1-16)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-actions justify-between mt-4">
+      <div class="form-control">
+        <label class="label cursor-pointer">
+          <span class="label-text mr-3">Enable Auto-Send</span>
+          <input type="checkbox"
+                 class="toggle toggle-secondary"
+                 [checked]="controlEnabled()"
+                 (change)="toggleControlEnabled()">
+        </label>
+      </div>
+
+      <button class="btn btn-secondary" (click)="testControl()">
+        <i class="bi bi-play-fill w-4 h-4"></i>
+        Test Control
+      </button>
+    </div>
+
+    <!-- Status indicator -->
+    <div class="mt-3 pt-3 border-t border-base-300">
+      <div class="text-sm opacity-70">
+        <span class="font-medium">Config:</span>
+        CC{{ controlParameter() }} = {{ controlValue() }} • Channel {{ controlChannel() + 1 }}
+        @if (controlEnabled()) {
+          <span class="badge badge-success badge-sm ml-2">AUTO</span>
+        } @else {
+          <span class="badge badge-ghost badge-sm ml-2">MANUAL</span>
+        }
+      </div>
+    </div>
+  </div>
+</div>

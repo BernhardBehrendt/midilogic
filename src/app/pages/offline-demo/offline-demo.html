@@ -1,0 +1,331 @@
+<div class="container mx-auto p-6 max-w-6xl">
+  <!-- Header -->
+  <div class="hero bg-gradient-to-r from-primary to-secondary text-primary-content rounded-lg mb-8">
+    <div class="hero-content text-center">
+      <div class="max-w-md">
+        <h1 class="text-4xl font-bold mb-4">
+          <i class="bi-music-note-beamed"></i>
+          MidiLogic Offline Demo
+        </h1>
+        <p class="text-lg opacity-90">
+          Experience the power of offline-first MIDI pattern management
+        </p>
+        <div class="flex items-center justify-center gap-4 mt-4">
+          <div class="badge badge-lg" [class]="isOnline() ? 'badge-success' : 'badge-error'">
+            <i class="bi-wifi" *ngIf="isOnline()"></i>
+            <i class="bi-wifi-off" *ngIf="!isOnline()"></i>
+            {{ isOnline() ? 'Online' : 'Offline' }}
+          </div>
+          <div class="badge badge-lg badge-info" *ngIf="syncStatus().pendingChanges > 0">
+            <i class="bi-cloud-upload"></i>
+            {{ syncStatus().pendingChanges }} pending
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="stat bg-base-100 rounded-lg shadow-sm border border-base-300">
+      <div class="stat-figure text-primary">
+        <i class="bi-music-note text-2xl"></i>
+      </div>
+      <div class="stat-title">Total Patterns</div>
+      <div class="stat-value text-primary">{{ totalPatterns() }}</div>
+    </div>
+
+    <div class="stat bg-base-100 rounded-lg shadow-sm border border-base-300">
+      <div class="stat-figure text-success">
+        <i class="bi-check-circle text-2xl"></i>
+      </div>
+      <div class="stat-title">Synced</div>
+      <div class="stat-value text-success">{{ syncedPatterns() }}</div>
+    </div>
+
+    <div class="stat bg-base-100 rounded-lg shadow-sm border border-base-300">
+      <div class="stat-figure text-warning">
+        <i class="bi-clock text-2xl"></i>
+      </div>
+      <div class="stat-title">Pending Sync</div>
+      <div class="stat-value text-warning">{{ unsyncedPatterns() }}</div>
+    </div>
+
+    <div class="stat bg-base-100 rounded-lg shadow-sm border border-base-300">
+      <div class="stat-figure" [class]="storageInitialized() ? 'text-success' : 'text-error'">
+        <i class="bi-database text-2xl"></i>
+      </div>
+      <div class="stat-title">Storage</div>
+      <div class="stat-value" [class]="storageInitialized() ? 'text-success' : 'text-error'">
+        {{ storageInitialized() ? 'Ready' : 'Loading' }}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Create Pattern Form -->
+    <div class="lg:col-span-1">
+      <div class="card bg-base-100 shadow-sm border border-base-300 sticky top-4">
+        <div class="card-body">
+          <h2 class="card-title">
+            <i class="bi-plus-circle text-primary"></i>
+            Create Pattern
+          </h2>
+
+          <!-- Error Alert -->
+          <div class="alert alert-error" *ngIf="error()">
+            <i class="bi-exclamation-triangle"></i>
+            <span>{{ error() }}</span>
+            <button class="btn btn-sm btn-ghost" (click)="error.set(null)">
+              <i class="bi-x"></i>
+            </button>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Pattern Name</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Enter pattern name"
+              class="input input-bordered"
+              [(ngModel)]="newPatternName"
+              [disabled]="isLoading()"
+            />
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">MIDI Notes</span>
+            </label>
+            <input
+              type="text"
+              placeholder="60,64,67,72"
+              class="input input-bordered"
+              [(ngModel)]="newPatternNotes"
+              [disabled]="isLoading()"
+            />
+            <label class="label">
+              <span class="label-text-alt">Comma-separated MIDI note numbers (0-127)</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Channel</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="16"
+                class="input input-bordered"
+                [(ngModel)]="newPatternChannel"
+                [disabled]="isLoading()"
+              />
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Velocity</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="127"
+                class="input input-bordered"
+                [(ngModel)]="newPatternVelocity"
+                [disabled]="isLoading()"
+              />
+            </div>
+          </div>
+
+          <div class="card-actions justify-end mt-4">
+            <button
+              class="btn btn-primary btn-block"
+              (click)="createPattern()"
+              [disabled]="!canCreatePattern() || isLoading()"
+            >
+              <span class="loading loading-spinner loading-sm" *ngIf="isLoading()"></span>
+              <i class="bi-plus" *ngIf="!isLoading()"></i>
+              {{ isLoading() ? 'Creating...' : 'Create Pattern' }}
+            </button>
+          </div>
+
+          <div class="divider">OR</div>
+
+          <div class="flex flex-col gap-2">
+            <button
+              class="btn btn-outline btn-sm"
+              (click)="generateSampleData()"
+              [disabled]="isLoading()"
+            >
+              <i class="bi-magic"></i>
+              Generate Sample Data
+            </button>
+
+            <button
+              class="btn btn-outline btn-error btn-sm"
+              (click)="clearAllPatterns()"
+              [disabled]="isLoading() || totalPatterns() === 0"
+            >
+              <i class="bi-trash"></i>
+              Clear All Patterns
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Patterns List -->
+    <div class="lg:col-span-2">
+      <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="card-title">
+              <i class="bi-list-ul text-primary"></i>
+              MIDI Patterns ({{ totalPatterns() }})
+            </h2>
+            <button
+              class="btn btn-outline btn-sm"
+              (click)="loadPatterns()"
+              [disabled]="isLoading()"
+            >
+              <i class="bi-arrow-clockwise" [class.animate-spin]="isLoading()"></i>
+              Refresh
+            </button>
+          </div>
+
+          <!-- Loading State -->
+          <div
+            class="flex items-center justify-center py-12"
+            *ngIf="isLoading() && totalPatterns() === 0"
+          >
+            <div class="text-center">
+              <span class="loading loading-spinner loading-lg text-primary"></span>
+              <div class="mt-4 text-base-content/70">Loading patterns...</div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div class="text-center py-12" *ngIf="!isLoading() && totalPatterns() === 0">
+            <div class="text-6xl mb-4 opacity-20">
+              <i class="bi-music-note"></i>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">No patterns yet</h3>
+            <p class="text-base-content/70 mb-4">Create your first MIDI pattern to get started</p>
+            <button class="btn btn-primary" (click)="generateSampleData()">
+              <i class="bi-magic"></i>
+              Generate Sample Patterns
+            </button>
+          </div>
+
+          <!-- Patterns Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="totalPatterns() > 0">
+            <div
+              *ngFor="let pattern of patterns(); trackBy: trackByPatternId"
+              class="card bg-base-200 border"
+              [class]="pattern.synced ? 'border-success/30' : 'border-warning/30'"
+            >
+              <div class="card-body p-4">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex-1">
+                    <h3 class="font-semibold text-lg truncate">{{ pattern.name }}</h3>
+                    <div class="text-sm text-base-content/70">
+                      Channel {{ pattern.channel }} • {{ pattern.notes.length }} notes
+                    </div>
+                  </div>
+                  <div class="badge badge-sm" [class]="getSyncStatusBadge(pattern.synced)">
+                    <i [class]="getSyncStatusIcon(pattern.synced)"></i>
+                    {{ getSyncStatusText(pattern.synced) }}
+                  </div>
+                </div>
+
+                <div class="space-y-2 text-sm">
+                  <div>
+                    <span class="font-medium">Notes:</span>
+                    <div class="text-xs font-mono bg-base-300 p-2 rounded mt-1">
+                      {{ formatNotes(pattern.notes) }}
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span class="font-medium">Created:</span><br />
+                      <span class="text-base-content/70">{{ formatDate(pattern.created) }}</span>
+                    </div>
+                    <div>
+                      <span class="font-medium">Modified:</span><br />
+                      <span class="text-base-content/70">{{ formatDate(pattern.modified) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card-actions justify-end mt-4">
+                  <button
+                    class="btn btn-outline btn-xs"
+                    (click)="updatePattern(pattern)"
+                    [disabled]="isLoading()"
+                  >
+                    <i class="bi-pencil"></i>
+                    Edit
+                  </button>
+                  <button
+                    class="btn btn-outline btn-error btn-xs"
+                    (click)="deletePattern(pattern)"
+                    [disabled]="isLoading()"
+                  >
+                    <i class="bi-trash"></i>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline Settings Section -->
+  <div class="mt-12">
+    <div class="divider">
+      <span class="text-lg font-semibold">Advanced Settings</span>
+    </div>
+    <ml-offline-settings></ml-offline-settings>
+  </div>
+
+  <!-- Demo Instructions -->
+  <div class="mt-12">
+    <div class="card bg-info text-info-content">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i class="bi-info-circle"></i>
+          Try the Offline Features
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div>
+            <h3 class="font-semibold mb-2">Test Offline Mode:</h3>
+            <ol class="list-decimal list-inside space-y-1 text-sm">
+              <li>Create some MIDI patterns above</li>
+              <li>Open browser dev tools (F12)</li>
+              <li>Go to Network tab → Check "Offline"</li>
+              <li>Continue creating/editing patterns</li>
+              <li>Uncheck "Offline" to see sync in action</li>
+            </ol>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-2">PWA Features:</h3>
+            <ol class="list-decimal list-inside space-y-1 text-sm">
+              <li>Install the app using the banner above</li>
+              <li>Access from home screen like a native app</li>
+              <li>Works completely offline after installation</li>
+              <li>Data syncs automatically when online</li>
+              <li>Persistent storage prevents data loss</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,388 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-2xl font-bold">Offline Settings</h2>
+      <p class="text-base-content/70">Manage offline functionality and data synchronization</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="badge" [class]="isOnline() ? 'badge-success' : 'badge-error'">
+        <i class="bi-wifi" *ngIf="isOnline()"></i>
+        <i class="bi-wifi-off" *ngIf="!isOnline()"></i>
+        {{ isOnline() ? 'Online' : 'Offline' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Storage Status -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold text-sm">Storage Usage</h3>
+            <p class="text-xs text-base-content/70">
+              {{ storageInfo().usage }} / {{ storageInfo().quota }} MB
+            </p>
+          </div>
+          <div
+            class="radial-progress text-xs"
+            [style.--value]="storageInfo().percent"
+            [class]="storageInfo().isLow ? 'text-error' : 'text-primary'"
+          >
+            {{ storageInfo().percent }}%
+          </div>
+        </div>
+        <div
+          class="progress progress-primary w-full h-2 mt-2"
+          [class]="storageInfo().isLow ? 'progress-error' : 'progress-primary'"
+        >
+          <div class="progress-bar" [style.width.%]="storageInfo().percent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync Status -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold text-sm">Sync Status</h3>
+            <p class="text-xs text-base-content/70">Last sync: {{ formatLastSync() }}</p>
+          </div>
+          <div class="badge badge-sm" [class]="getStatusBadgeClass(syncHealth().status)">
+            {{ syncHealth().message }}
+          </div>
+        </div>
+        <div class="mt-2" *ngIf="syncStatus().isSyncing">
+          <div class="flex items-center gap-2">
+            <div class="loading loading-spinner loading-xs"></div>
+            <span class="text-xs">Syncing...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Quality -->
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold text-sm">Connection</h3>
+            <p class="text-xs text-base-content/70">{{ connectionQuality().message }}</p>
+          </div>
+          <div class="flex items-center gap-1">
+            <div
+              class="w-1 h-3 rounded-full"
+              [class]="connectionQuality().status === 'excellent' || connectionQuality().status === 'good' || connectionQuality().status === 'poor' ? 'bg-primary' : 'bg-base-300'"
+            ></div>
+            <div
+              class="w-1 h-4 rounded-full"
+              [class]="connectionQuality().status === 'excellent' || connectionQuality().status === 'good' ? 'bg-primary' : 'bg-base-300'"
+            ></div>
+            <div
+              class="w-1 h-5 rounded-full"
+              [class]="connectionQuality().status === 'excellent' ? 'bg-primary' : 'bg-base-300'"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync Settings -->
+  <div class="card bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body">
+      <h3 class="card-title text-lg">
+        <i class="bi-arrow-repeat text-primary"></i>
+        Synchronization
+      </h3>
+
+      <div class="form-control">
+        <label class="label cursor-pointer">
+          <span class="label-text">
+            <div class="flex items-center gap-2">
+              <i class="bi-cloud-arrow-up"></i>
+              <span>Auto-sync</span>
+            </div>
+            <div class="text-xs text-base-content/70">Automatically sync changes when online</div>
+          </span>
+          <input
+            type="checkbox"
+            class="toggle toggle-primary"
+            [checked]="autoSyncEnabled()"
+            (change)="updateAutoSync($any($event.target).checked)"
+          />
+        </label>
+      </div>
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Sync interval (seconds)</span>
+        </label>
+        <input
+          type="range"
+          min="10"
+          max="300"
+          [value]="syncInterval()"
+          class="range range-primary"
+          (input)="updateSyncInterval(+$any($event.target).value)"
+        />
+        <div class="w-full flex justify-between text-xs px-2">
+          <span>10s</span>
+          <span>{{ syncInterval() }}s</span>
+          <span>5m</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button
+          class="btn btn-primary btn-sm"
+          (click)="forceSyncNow()"
+          [disabled]="!isOnline() || syncStatus().isSyncing"
+        >
+          <i class="bi-arrow-clockwise" [class.animate-spin]="syncStatus().isSyncing"></i>
+          Sync Now
+        </button>
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="pauseSync()"
+          *ngIf="!syncStatus().isEnabled"
+        >
+          <i class="bi-pause"></i>
+          Pause Sync
+        </button>
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="resumeSync()"
+          *ngIf="syncStatus().isEnabled"
+        >
+          <i class="bi-play"></i>
+          Resume Sync
+        </button>
+        <button
+          class="btn btn-outline btn-sm btn-warning"
+          (click)="clearSyncQueue()"
+          [disabled]="syncStatus().pendingChanges === 0"
+        >
+          <i class="bi-trash"></i>
+          Clear Queue ({{ syncStatus().pendingChanges }})
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Settings -->
+  <div class="card bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body">
+      <h3 class="card-title text-lg">
+        <i class="bi-gear text-primary"></i>
+        App Settings
+      </h3>
+
+      <div class="form-control">
+        <label class="label cursor-pointer">
+          <span class="label-text">
+            <div class="flex items-center gap-2">
+              <i class="bi-arrow-down-circle"></i>
+              <span>Auto-update</span>
+            </div>
+            <div class="text-xs text-base-content/70">
+              Automatically update the app when available
+            </div>
+          </span>
+          <input
+            type="checkbox"
+            class="toggle toggle-primary"
+            [checked]="autoUpdateEnabled()"
+            (change)="updateAutoUpdate($any($event.target).checked)"
+          />
+        </label>
+      </div>
+
+      <div class="form-control">
+        <label class="label cursor-pointer">
+          <span class="label-text">
+            <div class="flex items-center gap-2">
+              <i class="bi-database"></i>
+              <span>Persistent storage</span>
+            </div>
+            <div class="text-xs text-base-content/70">
+              Request permanent storage to prevent data loss
+            </div>
+          </span>
+          <input
+            type="checkbox"
+            class="toggle toggle-primary"
+            [checked]="persistentStorageEnabled()"
+            (change)="updatePersistentStorage($any($event.target).checked)"
+          />
+        </label>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button
+          class="btn btn-primary btn-sm"
+          (click)="installApp()"
+          *ngIf="offlineStatus().isInstallable"
+        >
+          <i class="bi-download"></i>
+          Install App
+        </button>
+        <button
+          class="btn btn-warning btn-sm"
+          (click)="updateApp()"
+          *ngIf="offlineStatus().hasUpdate"
+        >
+          <i class="bi-arrow-clockwise"></i>
+          Update Available
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Management -->
+  <div class="card bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body">
+      <h3 class="card-title text-lg">
+        <i class="bi-database text-primary"></i>
+        Data Management
+      </h3>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Export -->
+        <div class="space-y-2">
+          <h4 class="font-semibold">Export Data</h4>
+          <p class="text-sm text-base-content/70">
+            Download a backup of all your patterns and settings
+          </p>
+          <button
+            class="btn btn-outline btn-sm w-full"
+            (click)="exportData()"
+            [disabled]="isExporting()"
+          >
+            <i class="bi-download" *ngIf="!isExporting()"></i>
+            <span class="loading loading-spinner loading-sm" *ngIf="isExporting()"></span>
+            {{ isExporting() ? 'Exporting...' : 'Export Backup' }}
+          </button>
+        </div>
+
+        <!-- Import -->
+        <div class="space-y-2">
+          <h4 class="font-semibold">Import Data</h4>
+          <p class="text-sm text-base-content/70">Restore from a backup file</p>
+          <input
+            type="file"
+            accept=".json"
+            class="file-input file-input-bordered file-input-sm w-full"
+            (change)="importData($event)"
+            [disabled]="isImporting()"
+          />
+          <div class="text-xs text-base-content/70" *ngIf="isImporting()">
+            <span class="loading loading-spinner loading-xs"></span>
+            Importing...
+          </div>
+        </div>
+      </div>
+
+      <!-- Clear Data -->
+      <div class="divider"></div>
+      <div class="alert alert-warning">
+        <i class="bi-exclamation-triangle"></i>
+        <div>
+          <h4 class="font-bold">Danger Zone</h4>
+          <div class="text-sm">
+            This will permanently delete all offline data including patterns, settings, and sync
+            queue.
+          </div>
+        </div>
+        <button class="btn btn-error btn-sm" onclick="clear_data_modal.showModal()">
+          Clear All Data
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagnostics -->
+  <div class="card bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="card-title text-lg">
+          <i class="bi-clipboard-data text-primary"></i>
+          Diagnostics
+        </h3>
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="runDiagnostics()"
+          [disabled]="isRunningDiagnostics()"
+        >
+          <i class="bi-play-circle" *ngIf="!isRunningDiagnostics()"></i>
+          <span class="loading loading-spinner loading-sm" *ngIf="isRunningDiagnostics()"></span>
+          {{ isRunningDiagnostics() ? 'Running...' : 'Run Diagnostics' }}
+        </button>
+      </div>
+
+      <div *ngIf="diagnosticsResults()" class="space-y-3">
+        <div
+          class="alert"
+          [class]="'alert-' + (diagnosticsResults().overall === 'healthy' ? 'success' : diagnosticsResults().overall === 'warning' ? 'warning' : 'error')"
+        >
+          <i class="bi-check-circle" *ngIf="diagnosticsResults().overall === 'healthy'"></i>
+          <i class="bi-exclamation-triangle" *ngIf="diagnosticsResults().overall === 'warning'"></i>
+          <i class="bi-x-circle" *ngIf="diagnosticsResults().overall === 'error'"></i>
+          <span>Overall status: {{ diagnosticsResults().overall }}</span>
+        </div>
+
+        <div class="space-y-2">
+          <div
+            *ngFor="let check of diagnosticsResults().checks"
+            class="flex items-center justify-between p-3 rounded-lg border"
+            [class]="check.status === 'pass' ? 'border-success bg-success/10' : check.status === 'warning' ? 'border-warning bg-warning/10' : 'border-error bg-error/10'"
+          >
+            <div class="flex items-center gap-3">
+              <i class="bi-check-circle text-success" *ngIf="check.status === 'pass'"></i>
+              <i
+                class="bi-exclamation-triangle text-warning"
+                *ngIf="check.status === 'warning'"
+              ></i>
+              <i class="bi-x-circle text-error" *ngIf="check.status === 'fail'"></i>
+              <div>
+                <div class="font-semibold text-sm">{{ check.name }}</div>
+                <div class="text-xs opacity-70">{{ check.message }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clear Data Confirmation Modal -->
+<dialog id="clear_data_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg text-error">
+      <i class="bi-exclamation-triangle"></i>
+      Clear All Data
+    </h3>
+    <p class="py-4">This action will permanently delete:</p>
+    <ul class="list-disc list-inside space-y-1 text-sm">
+      <li>All MIDI patterns</li>
+      <li>App settings and preferences</li>
+      <li>Sync queue and offline data</li>
+      <li>Cached resources</li>
+    </ul>
+    <p class="py-4 text-error font-semibold">This action cannot be undone!</p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">Cancel</button>
+      </form>
+      <button class="btn btn-error" (click)="clearAllData()" [disabled]="isClearingData()">
+        <span class="loading loading-spinner loading-sm" *ngIf="isClearingData()"></span>
+        <i class="bi-trash" *ngIf="!isClearingData()"></i>
+        {{ isClearingData() ? 'Clearing...' : 'Clear All Data' }}
+      </button>
+    </div>
+  </div>
+</dialog>

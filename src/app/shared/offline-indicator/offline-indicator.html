@@ -1,0 +1,122 @@
+<div
+  class="fixed top-4 right-4 z-50 min-w-48 max-w-80 transition-all duration-300 ease-in-out"
+  [class]="'alert ' + getAlertClass()"
+  [hidden]="!shouldShowIndicator()"
+>
+  <div class="flex items-center gap-3">
+    <!-- Status Icon -->
+    <i class="text-lg" [class]="iconClass()" [class.animate-spin]="syncStatus().isSyncing"></i>
+
+    <!-- Status Text -->
+    <div class="flex-1">
+      <div class="font-medium text-sm">{{ statusText() }}</div>
+
+      <!-- Sync Progress Bar (when syncing) -->
+      <div class="mt-2" *ngIf="syncStatus().isSyncing">
+        <div class="w-full bg-base-300 rounded-full h-2">
+          <div
+            class="bg-current h-2 rounded-full transition-all duration-300"
+            [style.width.%]="syncProgress()"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Error Details (when there's an error) -->
+      <div class="text-xs mt-1 opacity-80" *ngIf="syncStatus().error">{{ syncStatus().error }}</div>
+    </div>
+
+    <!-- Manual Sync Button -->
+    <button
+      class="btn btn-ghost btn-sm btn-circle"
+      *ngIf="isOnline() && !syncStatus().isSyncing && syncStatus().pendingChanges > 0"
+      (click)="triggerSync()"
+      title="Sync pending changes"
+    >
+      <i class="bi-cloud-upload text-sm"></i>
+    </button>
+
+    <!-- Connection Quality Indicator -->
+    <div
+      class="flex items-center gap-1"
+      *ngIf="isOnline()"
+      [title]="'Connection quality: ' + connectionQuality()"
+    >
+      <div
+        class="w-1 h-3 rounded-full transition-colors duration-300"
+        [class]="getQualityDotClass(1)"
+      ></div>
+      <div
+        class="w-1 h-4 rounded-full transition-colors duration-300"
+        [class]="getQualityDotClass(2)"
+      ></div>
+      <div
+        class="w-1 h-5 rounded-full transition-colors duration-300"
+        [class]="getQualityDotClass(3)"
+      ></div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile responsive version -->
+<div
+  class="fixed bottom-4 left-4 right-4 z-50 transition-all duration-300 ease-in-out sm:hidden"
+  [class]="'alert ' + getAlertClass()"
+  [hidden]="!shouldShowIndicator()"
+>
+  <div class="flex items-center gap-3 w-full">
+    <!-- Status Icon -->
+    <i
+      class="text-lg flex-shrink-0"
+      [class]="iconClass()"
+      [class.animate-spin]="syncStatus().isSyncing"
+    ></i>
+
+    <!-- Status Text -->
+    <div class="flex-1 min-w-0">
+      <div class="font-medium text-sm truncate">{{ statusText() }}</div>
+
+      <!-- Sync Progress Bar (when syncing) -->
+      <div class="mt-1" *ngIf="syncStatus().isSyncing">
+        <div class="w-full bg-base-300 rounded-full h-1.5">
+          <div
+            class="bg-current h-1.5 rounded-full transition-all duration-300"
+            [style.width.%]="syncProgress()"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <!-- Manual Sync Button -->
+      <button
+        class="btn btn-ghost btn-xs btn-circle"
+        *ngIf="isOnline() && !syncStatus().isSyncing && syncStatus().pendingChanges > 0"
+        (click)="triggerSync()"
+        title="Sync pending changes"
+      >
+        <i class="bi-cloud-upload text-xs"></i>
+      </button>
+
+      <!-- Connection Quality Indicator -->
+      <div
+        class="flex items-center gap-0.5"
+        *ngIf="isOnline()"
+        [title]="'Connection quality: ' + connectionQuality()"
+      >
+        <div
+          class="w-0.5 h-2 rounded-full transition-colors duration-300"
+          [class]="getQualityDotClass(1)"
+        ></div>
+        <div
+          class="w-0.5 h-3 rounded-full transition-colors duration-300"
+          [class]="getQualityDotClass(2)"
+        ></div>
+        <div
+          class="w-0.5 h-4 rounded-full transition-colors duration-300"
+          [class]="getQualityDotClass(3)"
+        ></div>
+      </div>
+    </div>
+  </div>
+</div>

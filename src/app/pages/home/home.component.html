@@ -1,0 +1,123 @@
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <!-- Hero Section -->
+  <section class="relative py-20 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto text-center">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+        Welcome to
+        <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          {{ appName }}
+        </span>
+      </h1>
+
+      <p class="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+        A mathematical pattern sequencer that transforms data into beautiful MIDI compositions.
+        Connect to your DAW and create rhythms using algorithmic generation.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+        <button class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+          Start Creating
+        </button>
+        <button class="px-8 py-4 bg-white hover:bg-gray-50 text-blue-600 font-semibold rounded-lg shadow-lg border border-blue-600 transition-all duration-200">
+          View Documentation
+        </button>
+      </div>
+
+      <!-- Version badge -->
+      <div class="inline-flex items-center px-4 py-2 bg-white/80 rounded-full shadow-sm backdrop-blur-sm">
+        <span class="text-sm text-gray-600">Version {{ version }} • Built with Angular & Tailwind CSS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Powerful Features
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          Everything you need to create complex musical patterns and integrate with your existing workflow
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        @for (feature of features; track feature.title) {
+          <div class="bg-gradient-to-br from-white to-gray-50 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <i class="w-6 h-6 text-blue-600" [class]="feature.icon"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ feature.title }}</h3>
+            <p class="text-gray-600 text-sm leading-relaxed">{{ feature.description }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Stats -->
+  <section class="py-12 px-4 sm:px-6 lg:px-8 bg-blue-600">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-2">16</div>
+          <div class="text-blue-200 text-sm">Steps per Pattern</div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-2">4</div>
+          <div class="text-blue-200 text-sm">MIDI Tracks</div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-2">∞</div>
+          <div class="text-blue-200 text-sm">Pattern Combinations</div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-2">120</div>
+          <div class="text-blue-200 text-sm">Default BPM</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lab Component Section -->
+  <section class="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Try the Lab
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          Jump right in and start creating patterns. Click on the step buttons to activate them,
+          then hit play to hear your creation in action.
+        </p>
+      </div>
+
+      <!-- Lab Component -->
+      <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <ml-lab></ml-lab>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-600 to-blue-600">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+        Ready to Create Something Amazing?
+      </h2>
+      <p class="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
+        Connect your MIDI device, sync with your DAW, and let mathematical patterns drive your musical creativity.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button class="px-8 py-4 bg-white hover:bg-gray-100 text-purple-600 font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
+          Open Full Lab
+        </button>
+        <button class="px-8 py-4 bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-lg shadow-lg transition-all duration-200">
+          Learn More
+        </button>
+      </div>
+    </div>
+  </section>
+</div>

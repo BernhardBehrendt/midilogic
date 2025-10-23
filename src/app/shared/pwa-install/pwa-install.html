@@ -1,0 +1,136 @@
+<!-- Install App Banner -->
+<div
+  class="card bg-gradient-to-r from-primary to-secondary text-primary-content shadow-lg mb-4"
+  *ngIf="showInstallButton()"
+>
+  <div class="card-body">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="avatar">
+          <div class="w-12 rounded-lg bg-base-100">
+            <i
+              class="bi-music-note-beamed text-2xl text-primary flex items-center justify-center h-full"
+            ></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="card-title text-lg">Install MidiLogic</h3>
+          <p class="text-sm opacity-90">Get the full offline experience</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost btn-sm" (click)="installApp()">
+          <i class="bi-download"></i>
+          Install
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Update Available Banner -->
+<div class="alert alert-info shadow-lg mb-4" *ngIf="showUpdateButton()">
+  <div class="flex items-center justify-between w-full">
+    <div class="flex items-center gap-3">
+      <i class="bi-arrow-clockwise text-xl"></i>
+      <div>
+        <h3 class="font-bold">Update Available</h3>
+        <div class="text-sm opacity-90">A new version of MidiLogic is ready</div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-primary" (click)="updateApp()">
+      <i class="bi-download"></i>
+      Update Now
+    </button>
+  </div>
+</div>
+
+<!-- Installation Benefits Modal Trigger (for more detailed info) -->
+<div class="text-center" *ngIf="showInstallButton()">
+  <button class="btn btn-outline btn-sm" onclick="install_benefits_modal.showModal()">
+    <i class="bi-info-circle"></i>
+    Why install?
+  </button>
+</div>
+
+<!-- Installation Benefits Modal -->
+<dialog id="install_benefits_modal" class="modal">
+  <div class="modal-box">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+
+    <h3 class="font-bold text-lg mb-4">
+      <i class="bi-music-note-beamed text-primary"></i>
+      Install MidiLogic App
+    </h3>
+
+    <div class="space-y-4">
+      <div class="flex items-start gap-3">
+        <div class="badge badge-primary badge-outline">
+          <i class="bi-wifi-off"></i>
+        </div>
+        <div>
+          <h4 class="font-semibold">Work Offline</h4>
+          <p class="text-sm text-base-content/70">
+            Create and edit MIDI patterns without internet connection
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <div class="badge badge-primary badge-outline">
+          <i class="bi-lightning"></i>
+        </div>
+        <div>
+          <h4 class="font-semibold">Faster Performance</h4>
+          <p class="text-sm text-base-content/70">Instant loading and smoother interactions</p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <div class="badge badge-primary badge-outline">
+          <i class="bi-house"></i>
+        </div>
+        <div>
+          <h4 class="font-semibold">Home Screen Access</h4>
+          <p class="text-sm text-base-content/70">Launch directly from your device's home screen</p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <div class="badge badge-primary badge-outline">
+          <i class="bi-cloud-arrow-up"></i>
+        </div>
+        <div>
+          <h4 class="font-semibold">Automatic Sync</h4>
+          <p class="text-sm text-base-content/70">
+            Your changes sync automatically when back online
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-3">
+        <div class="badge badge-primary badge-outline">
+          <i class="bi-shield-check"></i>
+        </div>
+        <div>
+          <h4 class="font-semibold">Secure Storage</h4>
+          <p class="text-sm text-base-content/70">
+            Your MIDI patterns are stored securely on your device
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn btn-primary" (click)="installApp()">
+        <i class="bi-download"></i>
+        Install Now
+      </button>
+      <form method="dialog">
+        <button class="btn btn-ghost">Maybe Later</button>
+      </form>
+    </div>
+  </div>
+</dialog>
