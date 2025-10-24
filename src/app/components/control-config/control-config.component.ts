@@ -1,6 +1,7 @@
-import { Component, signal, OnDestroy, inject, input, output } from '@angular/core';
+import { Component, signal, OnDestroy, inject, input, output, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MidiPatternService, MidiControl } from '../../services/midi/midi-pattern.service';
+import { LabStateService } from '../../services/lab-state.service';
 
 @Component({
   selector: 'ml-control-config',
@@ -10,6 +11,7 @@ import { MidiPatternService, MidiControl } from '../../services/midi/midi-patter
 })
 export class ControlConfigComponent implements OnDestroy {
   private patternService = inject(MidiPatternService);
+  private labStateService = inject(LabStateService);
 
   // Input signals
   public instanceId = input<string>('');
@@ -22,6 +24,7 @@ export class ControlConfigComponent implements OnDestroy {
   public onDelete = output<string>();
   public onTest = output<MidiControl>();
   public onToggleEnabled = output<{ id: string; enabled: boolean }>();
+  public onConfigChange = output<{ id: string; updates: any }>();
 
   // Internal state
   private controlInstance: MidiControl | null = null;
@@ -50,6 +53,15 @@ export class ControlConfigComponent implements OnDestroy {
 
   constructor() {
     this.initializeInstance();
+
+    // Set up reactive loading of persisted state
+    effect(() => {
+      const isLoading = this.labStateService.isLoading();
+      if (!isLoading) {
+        // Service has finished loading, now load our persisted state
+        this.loadPersistedState();
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -66,10 +78,55 @@ export class ControlConfigComponent implements OnDestroy {
 
     // Create MidiControl instance
     this.controlInstance = this.patternService.createControl(
-      this.initialController(),
-      this.initialValue(),
-      this.initialChannel()
+      this.controlParameter(),
+      this.controlValue(),
+      this.controlChannel(),
     );
+
+    // Persisted state will be loaded reactively via effect in constructor
+  }
+
+  private loadPersistedState() {
+    const id = this.instanceId();
+    if (!id) return;
+
+    const persistedConfig = this.labStateService.getControlConfig(id);
+    if (persistedConfig) {
+      // Only update if values have actually changed to avoid unnecessary updates
+      if (this.controlEnabled() !== persistedConfig.enabled) {
+        this.controlEnabled.set(persistedConfig.enabled);
+      }
+      if (this.controlParameter() !== persistedConfig.controller) {
+        this.controlParameter.set(persistedConfig.controller);
+      }
+      if (this.controlValue() !== persistedConfig.value) {
+        this.controlValue.set(persistedConfig.value);
+      }
+      if (this.controlChannel() !== persistedConfig.channel) {
+        this.controlChannel.set(persistedConfig.channel);
+      }
+
+      // Update MIDI instance
+      if (this.controlInstance) {
+        this.controlInstance.setController(persistedConfig.controller);
+        this.controlInstance.setValue(persistedConfig.value);
+        this.controlInstance.setChannel(persistedConfig.channel);
+      }
+    }
+  }
+
+  private saveCurrentState() {
+    const id = this.instanceId();
+    if (!id) return;
+
+    const updates = {
+      enabled: this.controlEnabled(),
+      controller: this.controlParameter(),
+      value: this.controlValue(),
+      channel: this.controlChannel(),
+    };
+
+    this.onConfigChange.emit({ id, updates });
   }
 
   protected setControlValue(value: number) {
@@ -78,6 +135,7 @@ export class ControlConfigComponent implements OnDestroy {
     if (this.controlInstance) {
       this.controlInstance.setValue(clampedValue);
     }
+    this.saveCurrentState();
   }
 
   protected setControlParameter(param: number) {
@@ -86,6 +144,7 @@ export class ControlConfigComponent implements OnDestroy {
     if (this.controlInstance) {
       this.controlInstance.setController(clampedParam);
     }
+    this.saveCurrentState();
   }
 
   protected setControlChannel(channel: number) {
@@ -94,6 +153,7 @@ export class ControlConfigComponent implements OnDestroy {
     if (this.controlInstance) {
       this.controlInstance.setChannel(clampedChannel);
     }
+    this.saveCurrentState();
   }
 
   protected testControl() {
@@ -108,8 +168,9 @@ export class ControlConfigComponent implements OnDestroy {
     this.controlEnabled.set(newState);
     this.onToggleEnabled.emit({
       id: this.instanceId(),
-      enabled: newState
+      enabled: newState,
     });
+    this.saveCurrentState();
   }
 
   protected deleteInstance() {

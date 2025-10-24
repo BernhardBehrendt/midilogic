@@ -1,6 +1,16 @@
-import { Component, signal, OnDestroy, inject, input, output, computed } from '@angular/core';
+import {
+  Component,
+  signal,
+  OnDestroy,
+  inject,
+  input,
+  output,
+  computed,
+  effect,
+} from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { MidiPatternService, MidiNote } from '../../services/midi/midi-pattern.service';
+import { LabStateService } from '../../services/lab-state.service';
 import {
   getAllOctaves,
   getAllNotes,
@@ -19,6 +29,7 @@ import {
 })
 export class NoteConfigComponent implements OnDestroy {
   private patternService = inject(MidiPatternService);
+  private labStateService = inject(LabStateService);
 
   // Input signals
   public instanceId = input<string>('');
@@ -31,12 +42,13 @@ export class NoteConfigComponent implements OnDestroy {
   public onDelete = output<string>();
   public onTest = output<MidiNote>();
   public onToggleEnabled = output<{ id: string; enabled: boolean }>();
+  public onConfigChange = output<{ id: string; updates: any }>();
 
   // Internal state
   private noteInstance: MidiNote | null = null;
-  protected readonly noteEnabled = signal(false);
 
-  // UI binding signals that sync with the MidiNote instance
+  // UI binding signals that sync with the persistent state
+  protected readonly noteEnabled = signal(false);
   protected readonly selectedNote = signal(36);
   protected readonly noteVelocity = signal(100);
   protected readonly selectedChannel = signal(0);
@@ -73,6 +85,15 @@ export class NoteConfigComponent implements OnDestroy {
 
   constructor() {
     this.initializeInstance();
+
+    // Set up reactive loading of persisted state
+    effect(() => {
+      const isLoading = this.labStateService.isLoading();
+      if (!isLoading) {
+        // Service has finished loading, now load our persisted state
+        this.loadPersistedState();
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -89,10 +110,67 @@ export class NoteConfigComponent implements OnDestroy {
 
     // Create MidiNote instance
     this.noteInstance = this.patternService.createNote(
-      this.initialNote(),
-      this.initialVelocity(),
-      this.initialChannel(),
+      this.selectedNote(),
+      this.noteVelocity(),
+      this.selectedChannel(),
     );
+
+    // Persisted state will be loaded reactively via effect in constructor
+  }
+
+  private loadPersistedState() {
+    const id = this.instanceId();
+    if (!id) return;
+
+    const persistedConfig = this.labStateService.getNoteConfig(id);
+    if (persistedConfig) {
+      // Only update if values have actually changed to avoid unnecessary updates
+      if (this.noteEnabled() !== persistedConfig.enabled) {
+        this.noteEnabled.set(persistedConfig.enabled);
+      }
+      if (this.selectedNote() !== persistedConfig.note) {
+        this.selectedNote.set(persistedConfig.note);
+      }
+      if (this.noteVelocity() !== persistedConfig.velocity) {
+        this.noteVelocity.set(persistedConfig.velocity);
+      }
+      if (this.selectedChannel() !== persistedConfig.channel) {
+        this.selectedChannel.set(persistedConfig.channel);
+      }
+      if (this.selectedOctave() !== persistedConfig.octave) {
+        this.selectedOctave.set(persistedConfig.octave);
+      }
+      if (this.noteDisplayMode() !== persistedConfig.displayMode) {
+        this.noteDisplayMode.set(persistedConfig.displayMode);
+      }
+      if (this.useFlats() !== persistedConfig.useFlats) {
+        this.useFlats.set(persistedConfig.useFlats);
+      }
+
+      // Update MIDI instance
+      if (this.noteInstance) {
+        this.noteInstance.setNote(persistedConfig.note);
+        this.noteInstance.setVelocity(persistedConfig.velocity);
+        this.noteInstance.setChannel(persistedConfig.channel);
+      }
+    }
+  }
+
+  private saveCurrentState() {
+    const id = this.instanceId();
+    if (!id) return;
+
+    const updates = {
+      enabled: this.noteEnabled(),
+      note: this.selectedNote(),
+      velocity: this.noteVelocity(),
+      channel: this.selectedChannel(),
+      octave: this.selectedOctave(),
+      displayMode: this.noteDisplayMode(),
+      useFlats: this.useFlats(),
+    };
+
+    this.onConfigChange.emit({ id, updates });
   }
 
   protected setNote(note: number) {
@@ -106,6 +184,8 @@ export class NoteConfigComponent implements OnDestroy {
     if (noteInfo) {
       this.selectedOctave.set(noteInfo.octave);
     }
+
+    this.saveCurrentState();
   }
 
   protected setVelocity(velocity: number) {
@@ -114,6 +194,7 @@ export class NoteConfigComponent implements OnDestroy {
     if (this.noteInstance) {
       this.noteInstance.setVelocity(clampedVelocity);
     }
+    this.saveCurrentState();
   }
 
   protected setChannel(channel: number) {
@@ -122,6 +203,7 @@ export class NoteConfigComponent implements OnDestroy {
     if (this.noteInstance) {
       this.noteInstance.setChannel(clampedChannel);
     }
+    this.saveCurrentState();
   }
 
   protected testNote() {
@@ -138,10 +220,12 @@ export class NoteConfigComponent implements OnDestroy {
       id: this.instanceId(),
       enabled: newState,
     });
+    this.saveCurrentState();
   }
 
   protected setNoteDisplayMode(mode: 'common' | 'all' | 'drums' | 'octave') {
     this.noteDisplayMode.set(mode);
+    this.saveCurrentState();
   }
 
   protected setOctave(octave: number) {
@@ -157,10 +241,12 @@ export class NoteConfigComponent implements OnDestroy {
         this.setNote(newNote);
       }
     }
+    this.saveCurrentState();
   }
 
   protected toggleFlats() {
     this.useFlats.set(!this.useFlats());
+    this.saveCurrentState();
   }
 
   protected deleteInstance() {

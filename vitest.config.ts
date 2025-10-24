@@ -20,4 +20,13 @@ export default defineConfig({
     retry: 0,
     bail: 0,
   },
+  assetsInclude: ['**/*.html'],
+  define: {
+    'import.meta.vitest': undefined,
+  },
+  server: {
+    deps: {
+      inline: [/@angular/],
+    },
+  },
 });

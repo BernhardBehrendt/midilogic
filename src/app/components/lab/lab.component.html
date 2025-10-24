@@ -2,103 +2,112 @@
   <div class="max-w-6xl mx-auto space-y-6">
     <!-- Header -->
     <div class="text-center mb-8">
-      <h1 class="text-4xl font-bold mb-2">MIDI Clock Sync Test</h1>
-      <p class="text-base-content/70">Simple MIDI clock sync with multiple note and control triggers</p>
-    </div>
-
-    <!-- MIDI Device Selection -->
-    <div class="card bg-base-100 shadow-xl">
-      <div class="card-body">
-        <h2 class="card-title">
-          <i class="bi bi-music-note w-5 h-5"></i>
-          MIDI Devices
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- MIDI Input (for receiving clock) -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Input (Clock Source)</span>
-            </label>
-            <select class="select select-bordered w-full"
-                    (change)="selectMidiInput(availableInputs()[$any($event.target).selectedIndex])">
-              @if (availableInputs().length === 0) {
-                <option disabled selected>No MIDI inputs available</option>
-              } @else {
-                @for (device of availableInputs(); track device.id) {
-                  <option [selected]="selectedInput()?.id === device.id">
-                    {{ device.name }} - {{ device.manufacturer }}
-                  </option>
-                }
-              }
-            </select>
-          </div>
-
-          <!-- MIDI Output (for sending notes) -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Output (Note Destination)</span>
-            </label>
-            <select class="select select-bordered w-full"
-                    (change)="selectMidiOutput(availableOutputs()[$any($event.target).selectedIndex])">
-              @if (availableOutputs().length === 0) {
-                <option disabled selected>No MIDI outputs available</option>
-              } @else {
-                @for (device of availableOutputs(); track device.id) {
-                  <option [selected]="selectedOutput()?.id === device.id">
-                    {{ device.name }} - {{ device.manufacturer }}
-                  </option>
-                }
-              }
-            </select>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 mt-4">
-          <div class="badge" [class]="midiConnected() ? 'badge-success' : 'badge-error'">
-            <div class="w-2 h-2 rounded-full mr-1"
-                 [class]="midiConnected() ? 'bg-success' : 'bg-error'"></div>
-            {{ connectionStatus() }}
-          </div>
-        </div>
+      <h1 class="text-4xl font-bold mb-2">MIDI Pattern Lab</h1>
+      <p class="text-base-content/70">Create and test MIDI patterns with clock synchronization</p>
+      <div class="text-sm text-base-content/50 mt-2">
+        Configure MIDI devices and clock settings in
+        <a href="/settings" class="link link-primary">Settings</a>
       </div>
     </div>
 
-    <!-- Clock Status -->
-    <div class="card bg-base-100 shadow-xl">
-      <div class="card-body">
-        <h2 class="card-title">
-          <i class="bi bi-clock w-5 h-5"></i>
-          MIDI Clock Sync
-        </h2>
+    <!-- Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- MIDI Connection Status -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">
+            <i class="bi bi-music-note w-5 h-5"></i>
+            MIDI Status
+          </h2>
 
-        <div class="flex flex-wrap items-center gap-6">
-          <div class="stat">
-            <div class="stat-title">Clock Status</div>
-            <div class="stat-value text-lg" [class]="isReceivingClock() ? 'text-success' : 'text-error'">
-              {{ isReceivingClock() ? 'SYNCED' : 'NO SYNC' }}
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm">Connection</span>
+              <div class="badge" [class]="midiConnected() ? 'badge-success' : 'badge-error'">
+                <div class="w-2 h-2 rounded-full mr-1"
+                     [class]="midiConnected() ? 'bg-success-content' : 'bg-error-content'"></div>
+                {{ connectionStatus() }}
+              </div>
             </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-sm">Devices</span>
+              <div class="badge" [class]="getMidiStatusBadge()">
+                {{ midiDeviceStatus() }}
+              </div>
+            </div>
+
+            @if (midiSettings().syncEnabled) {
+            <div class="flex items-center justify-between">
+              <span class="text-sm">MIDI Channel</span>
+              <div class="badge badge-neutral">
+                {{ midiSettings().channel }}
+              </div>
+            </div>
+            }
           </div>
 
-          <div class="stat">
-            <div class="stat-title">Detected BPM</div>
-            <div class="stat-value text-lg text-primary">
-              {{ clockBPM() || '--' }}
-            </div>
+          @if (!midiConnected() || midiDeviceStatus() === 'DISCONNECTED') {
+          <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle w-5 h-5"></i>
+            <span>Configure MIDI devices in <a href="/settings" class="link">Settings</a></span>
           </div>
+          }
+        </div>
+      </div>
 
-          <div class="stat">
-            <div class="stat-title">Quarter Note</div>
-            <div class="stat-value text-lg">
+      <!-- Clock Status -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">
+            <i class="bi bi-clock w-5 h-5"></i>
+            Clock Status
+          </h2>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm">Source</span>
+              <div class="badge badge-neutral">
+                {{ clockSettings().source === 'internal' ? 'Internal' : 'External MIDI' }}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-sm">Status</span>
+              <div class="badge" [class]="getClockStatusBadge()">
+                {{ clockStatus() }}
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-sm">Quarter Note</span>
               <div class="w-6 h-6 rounded-full transition-all duration-100"
                    [class]="quarterNoteTrigger() ? 'bg-success animate-pulse' : 'bg-base-300'">
               </div>
             </div>
           </div>
 
-          <button class="btn btn-outline btn-sm" (click)="testQuarterNote()">
-            Test Quarter Note
-          </button>
+          <div class="flex gap-2 mt-4">
+            <button class="btn btn-sm btn-primary" (click)="toggleClock()">
+              @if (isClockRunning()) {
+              <i class="bi bi-pause-fill w-4 h-4"></i>
+              Stop
+              } @else {
+              <i class="bi bi-play-fill w-4 h-4"></i>
+              Start
+              }
+            </button>
+
+            <button class="btn btn-sm btn-outline" (click)="resetClock()">
+              <i class="bi bi-arrow-clockwise w-4 h-4"></i>
+              Reset
+            </button>
+
+            <button class="btn btn-sm btn-outline" (click)="testQuarterNote()">
+              <i class="bi bi-skip-forward w-4 h-4"></i>
+              Test Beat
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -108,8 +117,8 @@
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-bold flex items-center gap-2">
           <i class="bi bi-music-note w-6 h-6"></i>
-          Note Configurations
-          <span class="badge badge-primary">{{ noteInstances().length }}</span>
+          Note Patterns
+          <span class="badge badge-primary">{{ noteConfigs().length }}</span>
           @if (getEnabledNoteCount() > 0) {
             <span class="badge badge-success">{{ getEnabledNoteCount() }} active</span>
           }
@@ -117,30 +126,32 @@
 
         <button class="btn btn-primary btn-sm" (click)="addNoteInstance()">
           <i class="bi bi-plus w-4 h-4"></i>
-          Add Note
+          Add Note Pattern
         </button>
       </div>
 
-      @if (noteInstances().length === 0) {
+      @if (noteConfigs().length === 0) {
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body text-center py-8">
             <div class="text-base-content/50 mb-4">
               <i class="bi bi-music-note w-12 h-12 mx-auto mb-2 block"></i>
-              <p>No note configurations yet</p>
+              <p>No note patterns configured</p>
+              <p class="text-xs mt-1">Add patterns that will trigger on each beat</p>
             </div>
-            <button class="btn btn-primary" (click)="addNoteInstance()">Add Your First Note</button>
+            <button class="btn btn-primary" (click)="addNoteInstance()">Create First Pattern</button>
           </div>
         </div>
       } @else {
-        @for (instance of noteInstances(); track instance.id) {
+        @for (noteConfig of noteConfigs(); track noteConfig.id) {
           <ml-note-config
-            [instanceId]="instance.id"
-            [initialNote]="36"
-            [initialVelocity]="100"
-            [initialChannel]="0"
-            [showDelete]="noteInstances().length > 1"
+            [instanceId]="noteConfig.id"
+            [initialNote]="noteConfig.note"
+            [initialVelocity]="noteConfig.velocity"
+            [initialChannel]="noteConfig.channel"
+            [showDelete]="noteConfigs().length > 1"
             (onDelete)="onNoteDelete($event)"
             (onToggleEnabled)="onNoteToggleEnabled($event)"
+            (onConfigChange)="onNoteConfigChange($event)"
             #noteComponent>
           </ml-note-config>
         }
@@ -152,8 +163,8 @@
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-bold flex items-center gap-2">
           <i class="bi bi-sliders w-6 h-6"></i>
-          Control Configurations
-          <span class="badge badge-secondary">{{ controlInstances().length }}</span>
+          Control Patterns
+          <span class="badge badge-secondary">{{ controlConfigs().length }}</span>
           @if (getEnabledControlCount() > 0) {
             <span class="badge badge-success">{{ getEnabledControlCount() }} active</span>
           }
@@ -161,78 +172,163 @@
 
         <button class="btn btn-secondary btn-sm" (click)="addControlInstance()">
           <i class="bi bi-plus w-4 h-4"></i>
-          Add Control
+          Add Control Pattern
         </button>
       </div>
 
-      @if (controlInstances().length === 0) {
+      @if (controlConfigs().length === 0) {
         <div class="card bg-base-200 shadow-xl">
           <div class="card-body text-center py-8">
             <div class="text-base-content/50 mb-4">
               <i class="bi bi-sliders w-12 h-12 mx-auto mb-2 block"></i>
-              <p>No control configurations yet</p>
+              <p>No control patterns configured</p>
+              <p class="text-xs mt-1">Add MIDI CC patterns that will trigger on each beat</p>
             </div>
-            <button class="btn btn-secondary" (click)="addControlInstance()">Add Your First Control</button>
+            <button class="btn btn-secondary" (click)="addControlInstance()">Create First Control</button>
           </div>
         </div>
       } @else {
-        @for (instance of controlInstances(); track instance.id) {
+        @for (controlConfig of controlConfigs(); track controlConfig.id) {
           <ml-control-config
-            [instanceId]="instance.id"
-            [initialController]="1"
-            [initialValue]="64"
-            [initialChannel]="0"
-            [showDelete]="controlInstances().length > 1"
+            [instanceId]="controlConfig.id"
+            [initialController]="controlConfig.controller"
+            [initialValue]="controlConfig.value"
+            [initialChannel]="controlConfig.channel"
+            [showDelete]="controlConfigs().length > 1"
             (onDelete)="onControlDelete($event)"
             (onToggleEnabled)="onControlToggleEnabled($event)"
+            (onConfigChange)="onControlConfigChange($event)"
             #controlComponent>
           </ml-control-config>
         }
       }
     </div>
 
-    <!-- Status Display -->
+    <!-- Pattern Summary -->
     <div class="card bg-base-200 shadow-xl">
       <div class="card-body">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <i class="bi bi-info-circle w-6 h-6 text-info"></i>
             <div>
-              <h3 class="font-semibold">Pattern Status</h3>
+              <h3 class="font-semibold">Pattern Summary</h3>
               <div class="text-sm opacity-70 space-y-1">
                 <p>
-                  <span class="font-medium">Total Instances:</span> {{ getTotalInstanceCount() }}
-                  ({{ noteInstances().length }} notes, {{ controlInstances().length }} controls)
+                  <span class="font-medium">Total Patterns:</span> {{ getTotalInstanceCount() }}
+                  ({{ noteConfigs().length }} notes, {{ controlConfigs().length }} controls)
                 </p>
                 <p>
                   <span class="font-medium">Active on Beat:</span>
                   {{ getEnabledNoteCount() }} notes + {{ getEnabledControlCount() }} controls
                 </p>
-                @if (selectedOutput()) {
-                  <p><span class="font-medium">Output:</span> {{ selectedOutput()?.name }}</p>
-                }
+                <p>
+                  <span class="font-medium">MIDI Channel:</span>
+                  {{ midiSettings().channel }}
+                </p>
               </div>
             </div>
           </div>
 
           <div class="flex items-center gap-4">
-            @if (isReceivingClock()) {
+            @if (clockSettings().source === 'external' && isReceivingClock()) {
               <div class="badge badge-success gap-2">
                 <div class="w-2 h-2 bg-success-content rounded-full animate-pulse"></div>
-                Synced to {{ clockBPM() }} BPM
+                Synced {{ clockBPM() }} BPM
+              </div>
+            } @else if (clockSettings().source === 'internal' && isClockRunning()) {
+              <div class="badge badge-success gap-2">
+                <div class="w-2 h-2 bg-success-content rounded-full animate-pulse"></div>
+                Internal {{ currentBpm() }} BPM
               </div>
             } @else {
               <div class="badge badge-warning gap-2">
-                Waiting for MIDI Clock
+                Clock Stopped
               </div>
             }
 
             @if (getEnabledNoteCount() > 0 || getEnabledControlCount() > 0) {
               <div class="badge badge-info gap-2">
-                Pattern Ready
+                <i class="bi bi-check-circle w-3 h-3"></i>
+                Patterns Ready
+              </div>
+            } @else {
+              <div class="badge badge-ghost gap-2">
+                No Active Patterns
               </div>
             }
           </div>
+        </div>
+
+        @if (midiDeviceStatus() === 'DISCONNECTED' || !midiConnected()) {
+        <div class="alert alert-warning mt-4">
+          <i class="bi bi-exclamation-triangle w-5 h-5"></i>
+          <div>
+            <div class="font-medium">MIDI Setup Required</div>
+            <div class="text-sm">Configure MIDI devices in Settings to hear your patterns</div>
+          </div>
+          <a href="/settings" class="btn btn-sm btn-outline">
+            <i class="bi bi-gear w-4 h-4"></i>
+            Open Settings
+          </a>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- State Management Section -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i class="bi bi-save w-5 h-5"></i>
+          State Management
+        </h2>
+
+        <div class="flex flex-wrap gap-2">
+          @if (hasUnsavedChanges()) {
+            <div class="badge badge-warning gap-2">
+              <i class="bi bi-exclamation-triangle w-3 h-3"></i>
+              Unsaved Changes
+            </div>
+          } @else {
+            <div class="badge badge-success gap-2">
+              <i class="bi bi-check-circle w-3 h-3"></i>
+              All Changes Saved
+            </div>
+          }
+
+          @if (labLoading()) {
+            <div class="badge badge-info gap-2">
+              <span class="loading loading-spinner loading-xs"></span>
+              Loading...
+            </div>
+          }
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+          <button class="btn btn-sm btn-primary" (click)="saveLabState()">
+            <i class="bi bi-save w-4 h-4"></i>
+            Save State
+          </button>
+
+          <button class="btn btn-sm btn-outline" (click)="exportLabState()">
+            <i class="bi bi-download w-4 h-4"></i>
+            Export Config
+          </button>
+
+          <label class="btn btn-sm btn-outline">
+            <i class="bi bi-upload w-4 h-4"></i>
+            Import Config
+            <input type="file" accept=".json" class="hidden" (change)="importLabState($event)">
+          </label>
+
+          <button class="btn btn-sm btn-error btn-outline" (click)="resetLabState()">
+            <i class="bi bi-arrow-clockwise w-4 h-4"></i>
+            Reset All
+          </button>
+        </div>
+
+        <div class="text-xs text-base-content/60 mt-2">
+          Configuration is automatically saved when you make changes and persisted in offline storage.
         </div>
       </div>
     </div>

@@ -1,0 +1,483 @@
+<div class="container mx-auto p-4 max-w-6xl">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold mb-2">Settings</h1>
+        <p class="text-base-content/70">
+            Configure MIDI devices, clock settings, and app preferences
+        </p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs tabs-bordered mb-6">
+        <button
+            class="tab"
+            [class.tab-active]="activeTab() === 'midi'"
+            (click)="setActiveTab('midi')"
+        >
+            <span class="flex items-center gap-2">
+                <i class="bi bi-music-note-beamed w-4 h-4"></i>
+                MIDI
+            </span>
+        </button>
+
+        <button
+            class="tab"
+            [class.tab-active]="activeTab() === 'clock'"
+            (click)="setActiveTab('clock')"
+        >
+            <span class="flex items-center gap-2">
+                <i class="bi bi-clock w-4 h-4"></i>
+                Clock & Timing
+            </span>
+        </button>
+
+        <button
+            class="tab"
+            [class.tab-active]="activeTab() === 'system'"
+            (click)="setActiveTab('system')"
+        >
+            <span class="flex items-center gap-2">
+                <i class="bi bi-gear w-4 h-4"></i>
+                System
+            </span>
+        </button>
+    </div>
+
+    <!-- MIDI Settings Tab -->
+    @if (activeTab() === 'midi') {
+    <div class="space-y-6">
+        <!-- MIDI Status Card -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="card-title">MIDI Connection Status</h2>
+                    <div class="flex items-center gap-2">
+                        <button
+                            class="btn btn-sm btn-outline"
+                            (click)="refreshMidiDevices()"
+                            title="Refresh MIDI devices"
+                        >
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Refresh
+                        </button>
+                        <div class="badge" [class]="getMidiStatusBadge()">
+                            {{ getMidiStatusText() }}
+                        </div>
+                    </div>
+                </div>
+
+                @if (midiAccessError()) {
+                <div class="alert alert-error">
+                    <i class="bi bi-exclamation-circle w-6 h-6"></i>
+                    <span>{{ midiAccessError() }}</span>
+                </div>
+                } @else if (availableMidiInputs().length === 0 && availableMidiOutputs().length ===
+                0) {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle w-6 h-6"></i>
+                    <span
+                        >No MIDI devices detected. Make sure your MIDI devices are connected and try
+                        refreshing.</span
+                    >
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- MIDI Device Configuration -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Input Device -->
+            <div class="card bg-base-100 shadow-lg">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">Input Device</h3>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">MIDI Input</span>
+                        </label>
+                        <select
+                            class="select select-bordered w-full"
+                            [value]="midiSettings().inputDeviceId || ''"
+                            (change)="setMidiInputDevice($any($event.target).value)"
+                        >
+                            <option value="">No input device</option>
+                            @for (input of availableMidiInputs(); track input.id) {
+                            <option [value]="input.id">{{ input.name }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (availableMidiInputs().length === 0 && !midiAccessError()) {
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-info-circle w-6 h-6"></i>
+                        <span>No MIDI input devices found. Connect a device and refresh.</span>
+                    </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Output Device -->
+            <div class="card bg-base-100 shadow-lg">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">Output Device</h3>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">MIDI Output</span>
+                        </label>
+                        <select
+                            class="select select-bordered w-full"
+                            [value]="midiSettings().outputDeviceId || ''"
+                            (change)="setMidiOutputDevice($any($event.target).value)"
+                        >
+                            <option value="">No output device</option>
+                            @for (output of availableMidiOutputs(); track output.id) {
+                            <option [value]="output.id">{{ output.name }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (midiSettings().outputDeviceId) {
+                    <button
+                        class="btn btn-sm btn-outline mt-4"
+                        [class.loading]="isTestingMidi()"
+                        [disabled]="isTestingMidi()"
+                        (click)="testMidiOutput()"
+                    >
+                        Test Output
+                    </button>
+                    } @if (availableMidiOutputs().length === 0 && !midiAccessError()) {
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-info-circle w-6 h-6"></i>
+                        <span>No MIDI output devices found. Connect a device and refresh.</span>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDI Channel & Sync Settings -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">MIDI Configuration</h3>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <!-- MIDI Channel -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">MIDI Channel</span>
+                        </label>
+                        <input
+                            type="range"
+                            class="range range-primary"
+                            [min]="midiChannelRange.min"
+                            [max]="midiChannelRange.max"
+                            [step]="midiChannelRange.step"
+                            [value]="midiSettings().channel"
+                            (input)="setMidiChannel(+$any($event.target).value)"
+                        />
+                        <div class="flex justify-between text-xs px-2 mt-1">
+                            <span>1</span>
+                            <span class="font-bold">{{ midiSettings().channel }}</span>
+                            <span>16</span>
+                        </div>
+                    </div>
+
+                    <!-- MIDI Sync Toggle -->
+                    <div class="form-control">
+                        <label class="label cursor-pointer">
+                            <span class="label-text flex flex-col">
+                                <span>MIDI Sync</span>
+                                <span class="text-xs opacity-70">Enable MIDI synchronization</span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                class="toggle toggle-primary"
+                                [checked]="midiSettings().syncEnabled"
+                                (change)="toggleMidiSync()"
+                            />
+                        </label>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="flex flex-col gap-2">
+                        <button class="btn btn-sm btn-outline" (click)="refreshMidiDevices()">
+                            Refresh Devices
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Clock Settings Tab -->
+    @if (activeTab() === 'clock') {
+    <div class="space-y-6">
+        <!-- Clock Status Card -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="card-title">Clock Status</h2>
+                        <p class="text-sm opacity-70">
+                            {{ formatClockPosition() }} @ {{ currentBpm() }} BPM
+                        </p>
+                    </div>
+                    <div class="badge" [class]="getClockStatusBadge()">
+                        {{ getClockStatusText() }}
+                    </div>
+                </div>
+
+                <!-- Clock Controls -->
+                <div class="flex gap-2">
+                    <button class="btn btn-primary" (click)="toggleClock()">
+                        @if (isClockRunning()) {
+                        <i class="bi bi-pause-fill w-4 h-4"></i>
+                        Stop } @else {
+                        <i class="bi bi-play-fill w-4 h-4"></i>
+                        Start }
+                    </button>
+
+                    <button class="btn btn-outline" (click)="resetClock()">
+                        <i class="bi bi-arrow-clockwise w-4 h-4"></i>
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clock Source Configuration -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">Clock Source</h3>
+
+                <div class="form-control">
+                    <div class="flex gap-4">
+                        <label class="label cursor-pointer">
+                            <input
+                                type="radio"
+                                name="clockSource"
+                                class="radio radio-primary"
+                                value="internal"
+                                [checked]="clockSettings().source === 'internal'"
+                                (change)="setClockSource('internal')"
+                            />
+                            <span class="label-text ml-2">
+                                <span class="font-medium">Internal Clock</span>
+                                <span class="block text-xs opacity-70">Use built-in timing</span>
+                            </span>
+                        </label>
+
+                        <label class="label cursor-pointer">
+                            <input
+                                type="radio"
+                                name="clockSource"
+                                class="radio radio-primary"
+                                value="external"
+                                [checked]="clockSettings().source === 'external'"
+                                [disabled]="!canUseExternalClock()"
+                                (change)="setClockSource('external')"
+                            />
+                            <span class="label-text ml-2">
+                                <span class="font-medium">External MIDI Clock</span>
+                                <span class="block text-xs opacity-70">
+                                    @if (canUseExternalClock()) { Sync to MIDI clock signals } @else
+                                    { Requires MIDI input device & sync enabled }
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BPM & Timing Settings -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- BPM Control -->
+            <div class="card bg-base-100 shadow-lg">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">Tempo (BPM)</h3>
+
+                    <div class="form-control">
+                        <input
+                            type="range"
+                            class="range range-primary"
+                            [min]="bpmRange.min"
+                            [max]="bpmRange.max"
+                            [step]="bpmRange.step"
+                            [value]="currentBpm()"
+                            [disabled]="clockSettings().source === 'external'"
+                            (input)="setBpm(+$any($event.target).value)"
+                        />
+                        <div class="flex justify-between text-xs px-2 mt-1">
+                            <span>{{ bpmRange.min }}</span>
+                            <span class="font-bold text-lg">{{ currentBpm() }}</span>
+                            <span>{{ bpmRange.max }}</span>
+                        </div>
+                    </div>
+
+                    @if (clockSettings().source === 'external') {
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-info-circle w-6 h-6"></i>
+                        <span>BPM is controlled by external MIDI clock</span>
+                    </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Time Signature & Subdivision -->
+            <div class="card bg-base-100 shadow-lg">
+                <div class="card-body">
+                    <h3 class="card-title text-lg mb-4">Time Signature</h3>
+
+                    <div class="space-y-4">
+                        <!-- Beats per Bar -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Beats per Bar</span>
+                            </label>
+                            <select
+                                class="select select-bordered"
+                                [value]="clockState().beatsPerBar"
+                                (change)="setBeatsPerBar(+$any($event.target).value)"
+                            >
+                                <option value="2">2/4</option>
+                                <option value="3">3/4</option>
+                                <option value="4">4/4</option>
+                                <option value="5">5/4</option>
+                                <option value="6">6/8</option>
+                                <option value="7">7/8</option>
+                                <option value="8">8/8</option>
+                            </select>
+                        </div>
+
+                        <!-- Subdivision -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Subdivision</span>
+                            </label>
+                            <select
+                                class="select select-bordered"
+                                [value]="clockState().subdivision"
+                                (change)="setSubdivision(+$any($event.target).value)"
+                            >
+                                <option value="4">Quarter Notes</option>
+                                <option value="8">Eighth Notes</option>
+                                <option value="16">Sixteenth Notes</option>
+                                <option value="32">Thirty-second Notes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIDI Clock Sync Options -->
+        @if (midiSettings().syncEnabled) {
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">MIDI Clock Synchronization</h3>
+
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">
+                            <span class="font-medium">Send MIDI Clock</span>
+                            <span class="block text-xs opacity-70"
+                                >Send clock signals to connected devices</span
+                            >
+                        </span>
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-primary"
+                            [checked]="clockSettings().syncToMidiClock"
+                            (change)="toggleMidiClockSync()"
+                        />
+                    </label>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- Debug Information (Development Mode) -->
+        <div class="collapse collapse-arrow border border-base-300">
+            <input type="checkbox" />
+            <div class="collapse-title text-sm font-medium">Debug Information</div>
+            <div class="collapse-content">
+                <div class="space-y-4">
+                    <!-- Debug Actions -->
+                    <div class="flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-outline" (click)="logMidiState()">
+                            Log MIDI State
+                        </button>
+                        <button class="btn btn-sm btn-outline" (click)="testDevicePersistence()">
+                            Test Device Persistence
+                        </button>
+                        <button
+                            class="btn btn-sm btn-outline"
+                            (click)="settingsService.logCurrentSettings()"
+                        >
+                            Log All Settings
+                        </button>
+                    </div>
+
+                    <!-- Clock Debug Info -->
+                    <div>
+                        <h4 class="font-medium mb-2">Clock Debug Info:</h4>
+                        <pre class="text-xs overflow-auto bg-base-200 p-4 rounded">
+{{ clockDebugInfo() | json }}</pre
+                        >
+                    </div>
+
+                    <!-- MIDI Settings Debug -->
+                    <div>
+                        <h4 class="font-medium mb-2">MIDI Settings:</h4>
+                        <pre class="text-xs overflow-auto bg-base-200 p-4 rounded">
+{{ midiSettings() | json }}</pre
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- System Settings Tab -->
+    @if (activeTab() === 'system') {
+    <div class="space-y-6">
+        <!-- Settings Management -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">Settings Management</h3>
+
+                <div class="flex flex-wrap gap-4">
+                    <button class="btn btn-outline" (click)="exportSettings()">
+                        <i class="bi bi-download w-4 h-4"></i>
+                        Export Settings
+                    </button>
+
+                    <label class="btn btn-outline" for="import-settings">
+                        <i class="bi bi-upload w-4 h-4"></i>
+                        Import Settings
+                    </label>
+                    <input
+                        id="import-settings"
+                        type="file"
+                        accept=".json"
+                        class="hidden"
+                        (change)="importSettings($event)"
+                    />
+
+                    <button class="btn btn-error btn-outline" (click)="resetAllSettings()">
+                        <i class="bi bi-arrow-counterclockwise w-4 h-4"></i>
+                        Reset to Defaults
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offline & Sync Settings -->
+        <ml-offline-settings></ml-offline-settings>
+    </div>
+    }
+</div>

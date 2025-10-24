@@ -1,0 +1,44 @@
+<div class="w-full h-full p-4">
+    <!-- Grid Header -->
+    <div class="mb-4 flex justify-between items-center">
+        <h2 class="text-xl font-bold">MIDI Grid (128 Notes)</h2>
+        <div class="flex gap-2">
+            <button (click)="clearAll()" class="btn btn-sm btn-outline btn-error">Clear All</button>
+            <div class="badge badge-neutral">{{ activeBlocks().size }}/128</div>
+        </div>
+    </div>
+
+    <!-- Grid Container -->
+    <div class="w-full max-w-full overflow-auto">
+        <div
+            class="grid gap-1 w-fit mx-auto"
+            style="
+                grid-template-columns: repeat(16, minmax(0, 1fr));
+                grid-template-rows: repeat(8, minmax(0, 1fr));
+            "
+        >
+            @for (block of blocks(); track block.id) {
+            <button
+                (click)="toggleBlock(block.id)"
+                class="aspect-square w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded border-2 transition-all duration-150 flex items-center justify-center text-xs font-mono hover:scale-105 active:scale-95"
+                [class]="block.isActive
+            ? 'bg-primary text-primary-content border-primary-focus shadow-lg'
+            : 'bg-base-200 text-base-content border-base-300 hover:bg-base-300'"
+                [title]="'MIDI Note: ' + block.midiNote + ' (' + getBlockNote(block.midiNote) + ')'"
+            >
+                <!-- Show MIDI note number -->
+                <span class="hidden sm:inline">{{ block.midiNote }}</span>
+
+                <!-- Show just note name on smaller screens -->
+                <span class="sm:hidden text-xs">{{ getBlockNoteName(block.midiNote) }}</span>
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- Grid Info -->
+    <div class="mt-4 text-sm text-base-content/70 text-center">
+        <p>16 columns × 8 rows = 128 MIDI notes (C-1 to G9)</p>
+        <p class="text-xs mt-1">Click blocks to activate/deactivate • Hover for note info</p>
+    </div>
+</div>

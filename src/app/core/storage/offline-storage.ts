@@ -31,13 +31,27 @@ export interface MidiSettings {
   synced: boolean;
 }
 
+export interface LabState {
+  id: string;
+  name: string;
+  noteConfigs: any[];
+  controlConfigs: any[];
+  globalSettings: {
+    autoSave: boolean;
+    quickPatternMode: boolean;
+  };
+  created: number;
+  modified: number;
+  synced: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class OfflineStorageService {
   private db: IDBDatabase | null = null;
   private readonly dbName = 'MidiLogicDB';
-  private readonly dbVersion = 1;
+  private readonly dbVersion = 2;
 
   // Reactive signals for storage state
   isOnline = signal(navigator.onLine);
@@ -82,6 +96,12 @@ export class OfflineStorageService {
 
         if (!db.objectStoreNames.contains('sync_queue')) {
           db.createObjectStore('sync_queue', { keyPath: 'id' });
+        }
+
+        if (!db.objectStoreNames.contains('lab_states')) {
+          const labStatesStore = db.createObjectStore('lab_states', { keyPath: 'id' });
+          labStatesStore.createIndex('synced', 'synced', { unique: false });
+          labStatesStore.createIndex('modified', 'modified', { unique: false });
         }
       };
     });
@@ -202,6 +222,110 @@ export class OfflineStorageService {
     });
   }
 
+  // Lab States Storage
+  async saveLabState(
+    labState: Omit<LabState, 'id' | 'created' | 'modified' | 'synced'>,
+  ): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const id = this.generateId();
+    const now = Date.now();
+    const fullLabState: LabState = {
+      ...labState,
+      id,
+      created: now,
+      modified: now,
+      synced: false,
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['lab_states'], 'readwrite');
+      const store = transaction.objectStore('lab_states');
+      const request = store.add(fullLabState);
+
+      request.onsuccess = () => {
+        this.queueForSync('lab_states', id);
+        this.updatePendingSyncCount();
+        resolve(id);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async updateLabState(id: string, updates: Partial<LabState>): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const labState = await this.getLabState(id);
+    if (!labState) throw new Error('Lab state not found');
+
+    const updatedLabState: LabState = {
+      ...labState,
+      ...updates,
+      id,
+      modified: Date.now(),
+      synced: false,
+    };
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['lab_states'], 'readwrite');
+      const store = transaction.objectStore('lab_states');
+      const request = store.put(updatedLabState);
+
+      request.onsuccess = () => {
+        this.queueForSync('lab_states', id);
+        this.updatePendingSyncCount();
+        resolve();
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getLabState(id: string): Promise<LabState | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['lab_states'], 'readonly');
+      const store = transaction.objectStore('lab_states');
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getAllLabStates(): Promise<LabState[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['lab_states'], 'readonly');
+      const store = transaction.objectStore('lab_states');
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async deleteLabState(id: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['lab_states'], 'readwrite');
+      const store = transaction.objectStore('lab_states');
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        this.queueForSync('lab_states', id, 'delete');
+        this.updatePendingSyncCount();
+        resolve();
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // Settings Storage
   async saveSettings(
     settings: Omit<MidiSettings, 'id' | 'created' | 'modified' | 'synced'>,
@@ -310,7 +434,7 @@ export class OfflineStorageService {
   async clearAllData(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const stores = ['patterns', 'settings', 'sync_queue'];
+    const stores = ['patterns', 'settings', 'sync_queue', 'lab_states'];
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(stores, 'readwrite');
@@ -338,17 +462,26 @@ export class OfflineStorageService {
     return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  async exportData(): Promise<{ patterns: MidiPattern[]; settings: MidiSettings | null }> {
+  async exportData(): Promise<{
+    patterns: MidiPattern[];
+    settings: MidiSettings | null;
+    labStates: LabState[];
+  }> {
     const patterns = await this.getAllPatterns();
     const settings = await this.getSettings();
+    const labStates = await this.getAllLabStates();
 
-    return { patterns, settings };
+    return { patterns, settings, labStates };
   }
 
-  async importData(data: { patterns?: MidiPattern[]; settings?: MidiSettings }): Promise<void> {
+  async importData(data: {
+    patterns?: MidiPattern[];
+    settings?: MidiSettings;
+    labStates?: LabState[];
+  }): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const transaction = this.db.transaction(['patterns', 'settings'], 'readwrite');
+    const transaction = this.db.transaction(['patterns', 'settings', 'lab_states'], 'readwrite');
 
     if (data.patterns) {
       const patternsStore = transaction.objectStore('patterns');
@@ -368,6 +501,17 @@ export class OfflineStorageService {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
+    }
+
+    if (data.labStates) {
+      const labStatesStore = transaction.objectStore('lab_states');
+      for (const labState of data.labStates) {
+        await new Promise<void>((resolve, reject) => {
+          const request = labStatesStore.put({ ...labState, synced: false });
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
     }
 
     this.updatePendingSyncCount();

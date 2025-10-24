@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
+import { MidiGridComponent } from '../../components/midi-grid/midi-grid';
 
 @Component({
   selector: 'ml-matrix',
-  imports: [],
+  standalone: true,
+  imports: [MidiGridComponent],
   templateUrl: './matrix.html',
-  styleUrl: './matrix.css',
 })
 export class Matrix {}

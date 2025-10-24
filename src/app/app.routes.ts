@@ -24,6 +24,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/matrix/matrix').then((m) => m.Matrix),
       },
       {
+        path: 'settings',
+        loadComponent: () => import('./pages/settings/settings').then((m) => m.SettingsComponent),
+      },
+      {
         path: 'offline-demo',
         loadComponent: () =>
           import('./pages/offline-demo/offline-demo').then((m) => m.OfflineDemoComponent),

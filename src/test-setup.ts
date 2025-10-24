@@ -1,4 +1,12 @@
-import 'vitest/globals';
+// Vitest globals are configured in vitest.config.ts
+import { getTestBed } from '@angular/core/testing';
+import {
+  BrowserDynamicTestingModule,
+  platformBrowserDynamicTesting,
+} from '@angular/platform-browser-dynamic/testing';
+
+// Initialize Angular testing environment globally
+getTestBed().initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
 // Mock navigator.onLine
 Object.defineProperty(navigator, 'onLine', {
@@ -12,14 +20,14 @@ const mockEventListeners: { [key: string]: Array<(event: any) => void> } = {};
 const originalAddEventListener = window.addEventListener;
 const originalRemoveEventListener = window.removeEventListener;
 
-window.addEventListener = vi.fn((event: string, callback: any) => {
+window.addEventListener = ((event: string, callback: any) => {
   if (!mockEventListeners[event]) {
     mockEventListeners[event] = [];
   }
   mockEventListeners[event].push(callback);
 }) as any;
 
-window.removeEventListener = vi.fn((event: string, callback: any) => {
+window.removeEventListener = ((event: string, callback: any) => {
   if (mockEventListeners[event]) {
     const index = mockEventListeners[event].indexOf(callback);
     if (index > -1) {
@@ -31,32 +39,30 @@ window.removeEventListener = vi.fn((event: string, callback: any) => {
 // Mock service worker
 Object.defineProperty(navigator, 'serviceWorker', {
   value: {
-    register: vi.fn(() =>
+    register: () =>
       Promise.resolve({
-        update: vi.fn(),
-        unregister: vi.fn(),
+        update: () => {},
+        unregister: () => {},
       }),
-    ),
     ready: Promise.resolve({
-      update: vi.fn(),
-      unregister: vi.fn(),
+      update: () => {},
+      unregister: () => {},
     }),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
+    addEventListener: () => {},
+    removeEventListener: () => {},
   },
   writable: true,
 });
 
 // Mock MIDI API for future use
 Object.defineProperty(navigator, 'requestMIDIAccess', {
-  value: vi.fn(() =>
+  value: () =>
     Promise.resolve({
       inputs: new Map(),
       outputs: new Map(),
       onstatechange: null,
       sysexEnabled: false,
     }),
-  ),
   writable: true,
 });
 
@@ -91,8 +97,11 @@ Object.defineProperty(navigator, 'requestMIDIAccess', {
 
 // Clean up function for tests
 export const cleanupMocks = () => {
-  vi.clearAllMocks();
-  vi.clearAllTimers();
+  // Only use vi functions if in test environment
+  if (typeof globalThis !== 'undefined' && (globalThis as any).vi) {
+    (globalThis as any).vi.clearAllMocks();
+    (globalThis as any).vi.clearAllTimers();
+  }
   Object.keys(mockEventListeners).forEach((key) => {
     mockEventListeners[key] = [];
   });
