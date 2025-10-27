@@ -1,20 +1,11 @@
-import {
-  Component,
-  signal,
-  OnDestroy,
-  inject,
-  ViewChildren,
-  QueryList,
-  AfterViewInit,
-  computed,
-  effect,
-} from '@angular/core';
+import { Component, signal, OnDestroy, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MidiService } from '../../services/midi/midi.service';
 import { MidiPatternService } from '../../services/midi/midi-pattern.service';
 import { SettingsService } from '../../services/settings';
 import { ClockService } from '../../services/clock';
 import { LabStateService } from '../../services/lab-state.service';
+import { PlaybackService } from '../../services/playback.service';
 import { NoteConfigComponent } from '../note-config/note-config.component';
 import { ControlConfigComponent } from '../control-config/control-config.component';
 
@@ -24,15 +15,13 @@ import { ControlConfigComponent } from '../control-config/control-config.compone
   imports: [CommonModule, NoteConfigComponent, ControlConfigComponent],
   templateUrl: './lab.component.html',
 })
-export class LabComponent implements OnDestroy, AfterViewInit {
+export class LabComponent implements OnDestroy {
   private midiService = inject(MidiService);
   private patternService = inject(MidiPatternService);
   private settingsService = inject(SettingsService);
   private clockService = inject(ClockService);
   private labStateService = inject(LabStateService);
-
-  @ViewChildren(NoteConfigComponent) noteComponents!: QueryList<NoteConfigComponent>;
-  @ViewChildren(ControlConfigComponent) controlComponents!: QueryList<ControlConfigComponent>;
+  private playbackService = inject(PlaybackService);
 
   // Settings from settings service
   protected readonly midiSettings = this.settingsService.midiSettings;
@@ -48,6 +37,11 @@ export class LabComponent implements OnDestroy, AfterViewInit {
   protected readonly isReceivingClock = this.midiService.isReceivingClock;
   protected readonly clockBPM = this.midiService.detectedBPM;
   protected readonly quarterNoteTrigger = signal(false);
+
+  // Playback state from service
+  protected readonly playbackState = this.playbackService.playbackState;
+  protected readonly isPlaybackEnabled = this.playbackService.isEnabled;
+  protected readonly isPlaybackPlaying = this.playbackService.isPlaying;
 
   // Lab state from service
   protected readonly labState = this.labStateService.labState;
@@ -80,104 +74,34 @@ export class LabComponent implements OnDestroy, AfterViewInit {
     return 'DISCONNECTED';
   });
 
-  private intervalId: number | null = null;
+  private playbackTriggerListener: ((event: Event) => void) | null = null;
 
   constructor() {
-    // Listen for quarter note events from MIDI service
-    this.setupMidiQuarterNoteListener();
-
-    // Setup effect to monitor clock service pulses
-    this.setupClockPulseListener();
-  }
-
-  ngAfterViewInit() {
-    // ViewChildren are now available
+    // Listen for playback trigger events from the playback service
+    this.setupPlaybackTriggerListener();
   }
 
   ngOnDestroy() {
-    // Cleanup quarter note listener
-    window.removeEventListener('midiQuarterNote', this.onQuarterNote as EventListener);
-
-    // Cleanup interval if exists
-    if (this.intervalId !== null) {
-      clearInterval(this.intervalId);
+    // Cleanup playback trigger listener
+    if (this.playbackTriggerListener) {
+      window.removeEventListener('playbackTrigger', this.playbackTriggerListener);
+      this.playbackTriggerListener = null;
     }
   }
 
-  private setupMidiQuarterNoteListener() {
-    // Listen for MIDI clock quarter notes
-    window.addEventListener('midiQuarterNote', this.onQuarterNote as EventListener);
-  }
+  private setupPlaybackTriggerListener() {
+    this.playbackTriggerListener = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      // Visual feedback when playback triggers
+      this.quarterNoteTrigger.set(true);
 
-  private setupClockPulseListener() {
-    // React to clock pulse changes from the clock service
-    effect(() => {
-      const lastPulse = this.clockService.lastPulse();
-      const clockSettings = this.clockSettings();
-      const clockState = this.clockService.clockState();
+      // Reset visual feedback after short delay
+      setTimeout(() => {
+        this.quarterNoteTrigger.set(false);
+      }, 100);
+    };
 
-      // Only trigger on internal clock pulses
-      if (lastPulse && clockSettings.source === 'internal' && this.isClockRunning()) {
-        // Calculate if this is a quarter note beat
-        // With subdivision = 16 (sixteenth notes), quarter notes occur every 4 subdivisions
-        // With subdivision = 8 (eighth notes), quarter notes occur every 2 subdivisions
-        // With subdivision = 4 (quarter notes), quarter notes occur every 1 subdivision
-        const subdivisionsPerQuarterNote = Math.max(1, clockState.subdivision / 4);
-
-        // Debug logging for BPM tracking
-        if (localStorage.getItem('debug-clock') === 'true') {
-          console.log('Clock pulse:', {
-            bpm: this.currentBpm(),
-            subdivision: lastPulse.subdivision,
-            subdivisionsPerQuarterNote,
-            shouldTrigger: (lastPulse.subdivision - 1) % subdivisionsPerQuarterNote === 0,
-          });
-        }
-
-        // Trigger on quarter note boundaries
-        if ((lastPulse.subdivision - 1) % subdivisionsPerQuarterNote === 0) {
-          this.triggerQuarterNote();
-        }
-      }
-    });
-  }
-
-  private onQuarterNote = (event: Event) => {
-    this.triggerQuarterNote();
-  };
-
-  private triggerQuarterNote() {
-    this.quarterNoteTrigger.set(true);
-
-    // Debug logging for note triggers
-    if (localStorage.getItem('debug-clock') === 'true') {
-      console.log('Triggering quarter note at BPM:', this.currentBpm());
-    }
-
-    // Trigger all enabled note instances based on persisted state
-    const enabledNoteConfigs = this.noteConfigs().filter((config) => config.enabled);
-    enabledNoteConfigs.forEach((config) => {
-      // Find the corresponding component and trigger it
-      const component = this.noteComponents?.find((comp) => comp.instanceId() === config.id);
-      if (component) {
-        component.playNote(100);
-      }
-    });
-
-    // Send all enabled control instances based on persisted state
-    const enabledControlConfigs = this.controlConfigs().filter((config) => config.enabled);
-    enabledControlConfigs.forEach((config) => {
-      // Find the corresponding component and trigger it
-      const component = this.controlComponents?.find((comp) => comp.instanceId() === config.id);
-      if (component) {
-        component.sendControl();
-      }
-    });
-
-    // Reset trigger visual after short delay
-    setTimeout(() => {
-      this.quarterNoteTrigger.set(false);
-    }, 100);
+    window.addEventListener('playbackTrigger', this.playbackTriggerListener as EventListener);
   }
 
   // Clock control methods
@@ -195,7 +119,7 @@ export class LabComponent implements OnDestroy, AfterViewInit {
 
   // Test quarter note trigger manually
   protected testQuarterNote() {
-    this.triggerQuarterNote();
+    this.playbackService.manualTrigger();
   }
 
   // BPM testing methods

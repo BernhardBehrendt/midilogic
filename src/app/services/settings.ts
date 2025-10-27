@@ -39,7 +39,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   providedIn: 'root',
 })
 export class SettingsService {
-  private readonly STORAGE_KEY = 'app-settings';
+  private readonly STORAGE_KEY = 'midilogic_settings';
 
   // Settings signals
   private _settings = signal<AppSettings>(DEFAULT_SETTINGS);

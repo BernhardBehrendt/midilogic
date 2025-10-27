@@ -87,14 +87,6 @@ export class SettingsComponent {
     // After updating device lists, sync with stored settings
     const midiSettings = this.midiSettings();
     this.syncMidiDeviceSelection(midiSettings);
-
-    // Log for debugging
-    console.log('MIDI devices updated:', {
-      inputs: inputs.length,
-      outputs: outputs.length,
-      hasStoredInput: !!midiSettings.inputDeviceId,
-      hasStoredOutput: !!midiSettings.outputDeviceId,
-    });
   }
 
   setMidiInputDevice(deviceId: string): void {
@@ -233,62 +225,20 @@ export class SettingsComponent {
     }
   }
 
-  refreshMidiDevices(): void {
-    this.initializeMidiAccess();
-  }
-
-  // Debug methods to help troubleshoot persistence issues
-  logMidiState(): void {
-    console.group('MIDI State Debug');
-    console.log('Current MIDI Settings:', this.midiSettings());
-    console.log(
-      'Available Inputs:',
-      this.availableMidiInputs().map((i) => ({ id: i.id, name: i.name })),
-    );
-    console.log(
-      'Available Outputs:',
-      this.availableMidiOutputs().map((o) => ({ id: o.id, name: o.name })),
-    );
-    console.log('MIDI Access Error:', this.midiAccessError());
-    console.groupEnd();
-  }
-
-  // Test method to verify device persistence
-  testDevicePersistence(): void {
-    const settings = this.midiSettings();
-    const inputs = this.availableMidiInputs();
-    const outputs = this.availableMidiOutputs();
-
-    console.group('Device Persistence Test');
-
-    if (settings.inputDeviceId) {
-      const inputExists = inputs.find((i) => i.id === settings.inputDeviceId);
-      console.log('Stored input device:', settings.inputDeviceId);
-      console.log('Input device exists:', !!inputExists);
-      if (inputExists) {
-        console.log('Input device found:', inputExists.name);
-      }
-    }
-
-    if (settings.outputDeviceId) {
-      const outputExists = outputs.find((o) => o.id === settings.outputDeviceId);
-      console.log('Stored output device:', settings.outputDeviceId);
-      console.log('Output device exists:', !!outputExists);
-      if (outputExists) {
-        console.log('Output device found:', outputExists.name);
-      }
-    }
-
-    console.groupEnd();
-  }
 
   // Sync MIDI device selection with stored settings
   private syncMidiDeviceSelection(midiSettings: any): void {
     const inputs = this.availableMidiInputs();
     const outputs = this.availableMidiOutputs();
 
+    // Only check device existence if we have devices available
+    // This prevents clearing settings during MIDI initialization race conditions
+    if (inputs.length === 0 && outputs.length === 0) {
+      return;
+    }
+
     // Check if stored input device ID exists in current device list
-    if (midiSettings.inputDeviceId) {
+    if (midiSettings.inputDeviceId && inputs.length > 0) {
       const inputExists = inputs.some((input) => input.id === midiSettings.inputDeviceId);
       if (!inputExists) {
         console.warn('Stored input device not found, clearing selection');
@@ -297,7 +247,7 @@ export class SettingsComponent {
     }
 
     // Check if stored output device ID exists in current device list
-    if (midiSettings.outputDeviceId) {
+    if (midiSettings.outputDeviceId && outputs.length > 0) {
       const outputExists = outputs.some((output) => output.id === midiSettings.outputDeviceId);
       if (!outputExists) {
         console.warn('Stored output device not found, clearing selection');
@@ -325,6 +275,11 @@ export class SettingsComponent {
 
     if (!running) return 'Stopped';
     return settings.source === 'internal' ? 'Running (Internal)' : 'Running (External)';
+  }
+
+  // Refresh MIDI devices
+  refreshMidiDevices(): void {
+    this.initializeMidiAccess();
   }
 
   getMidiStatusBadge(): string {

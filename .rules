@@ -22,9 +22,12 @@ assistant:
     - Strong expertise in Angular (latest stable release), TypeScript, and frontend architecture.
     - Deep understanding of reactive patterns using Angular signals, computed values, and effects.
     - Familiar with Web MIDI API and browser-level MIDI integrations.
-    - Experience with Tailwind CSS 4.x and DaisyUI component styling.
+    - Experience with DaisyUI 5.x component styling and Tailwind CSS 4.x styling.
     - Can use Angular CLI (`npx ng ...`) to scaffold components and services.
-    - Understands zoneless Angular setups and best practices for modern, reactive UIs.
+    - zoneless Angular (there is no zone.js) and testing environments together with vitest and best practices for modern, reactive UIs.
+    - testing is done using vitest
+    - You also have deep musical knowledge in the field of MIDI and Controllers and of course synths.
+    - Your strong focus on functional design and bauhaus principles help you streamline the software with helpful interfaces / ui that serve clarity even to new people who interact with this peace of software.
 
 # ================================
 # Project Context
@@ -48,6 +51,7 @@ development:
     - Use modern Angular patterns (signals, computed, effects) instead of `@Input()` / `@Output()`.
     - Prefer strongly typed reactive code over decorators or legacy bindings.
     - Use modular imports and feature-based folder structure.
+    - run linting then unit tests (npm run test) and finally build it (npm run build)
 
   cli:
     base_command: "npx ng"

@@ -97,8 +97,8 @@
                         </label>
                         <select
                             class="select select-bordered w-full"
-                            [value]="midiSettings().inputDeviceId || ''"
-                            (change)="setMidiInputDevice($any($event.target).value)"
+                            [ngModel]="midiSettings().inputDeviceId || ''"
+                            (ngModelChange)="setMidiInputDevice($event)"
                         >
                             <option value="">No input device</option>
                             @for (input of availableMidiInputs(); track input.id) {
@@ -127,8 +127,8 @@
                         </label>
                         <select
                             class="select select-bordered w-full"
-                            [value]="midiSettings().outputDeviceId || ''"
-                            (change)="setMidiOutputDevice($any($event.target).value)"
+                            [ngModel]="midiSettings().outputDeviceId || ''"
+                            (ngModelChange)="setMidiOutputDevice($event)"
                         >
                             <option value="">No output device</option>
                             @for (output of availableMidiOutputs(); track output.id) {
@@ -399,49 +399,6 @@
         </div>
         }
 
-        <!-- Debug Information (Development Mode) -->
-        <div class="collapse collapse-arrow border border-base-300">
-            <input type="checkbox" />
-            <div class="collapse-title text-sm font-medium">Debug Information</div>
-            <div class="collapse-content">
-                <div class="space-y-4">
-                    <!-- Debug Actions -->
-                    <div class="flex gap-2 flex-wrap">
-                        <button class="btn btn-sm btn-outline" (click)="logMidiState()">
-                            Log MIDI State
-                        </button>
-                        <button class="btn btn-sm btn-outline" (click)="testDevicePersistence()">
-                            Test Device Persistence
-                        </button>
-                        <button
-                            class="btn btn-sm btn-outline"
-                            (click)="settingsService.logCurrentSettings()"
-                        >
-                            Log All Settings
-                        </button>
-                    </div>
-
-                    <!-- Clock Debug Info -->
-                    <div>
-                        <h4 class="font-medium mb-2">Clock Debug Info:</h4>
-                        <pre class="text-xs overflow-auto bg-base-200 p-4 rounded">
-{{ clockDebugInfo() | json }}</pre
-                        >
-                    </div>
-
-                    <!-- MIDI Settings Debug -->
-                    <div>
-                        <h4 class="font-medium mb-2">MIDI Settings:</h4>
-                        <pre class="text-xs overflow-auto bg-base-200 p-4 rounded">
-{{ midiSettings() | json }}</pre
-                        >
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    }
-
     <!-- System Settings Tab -->
     @if (activeTab() === 'system') {
     <div class="space-y-6">
@@ -481,3 +438,4 @@
     </div>
     }
 </div>
+    }

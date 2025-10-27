@@ -1,0 +1,70 @@
+<div class="mb-4">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-base-content/70">Playback</h3>
+        <div class="flex items-center gap-2">
+            <div [class]="'badge badge-xs ' + playbackStatusBadge()">{{ playbackStatus() }}</div>
+            <div class="form-control">
+                <label class="label cursor-pointer p-0">
+                    <input
+                        type="checkbox"
+                        class="toggle toggle-xs toggle-primary"
+                        [checked]="isEnabled()"
+                        (change)="toggleEnabled()"
+                    />
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-2">
+        <!-- Playback Controls -->
+        <div class="flex items-center gap-2">
+            <button
+                class="btn btn-sm btn-primary flex-1"
+                [disabled]="!canPlay()"
+                (click)="togglePlayback()"
+            >
+                <i [class]="isPlaying() ? 'bi bi-pause-fill' : 'bi bi-play-fill'"></i>
+                {{ isPlaying() ? 'Stop' : 'Play' }}
+            </button>
+
+            <button
+                class="btn btn-sm btn-ghost btn-square"
+                [disabled]="!isEnabled()"
+                (click)="manualTrigger()"
+                title="Manual Trigger"
+            >
+                <i class="bi bi-lightning-fill"></i>
+            </button>
+        </div>
+
+        <!-- Playback Info -->
+        <div class="flex items-center justify-between text-xs text-base-content/60">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1">
+                    <i class="bi bi-music-note"></i>
+                    <span>{{ enabledNoteCount() }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <i class="bi bi-sliders"></i>
+                    <span>{{ enabledControlCount() }}</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1" *ngIf="isPlaying()">
+                <div class="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                <span>Active</span>
+            </div>
+        </div>
+
+        <!-- Help Text -->
+        <div class="text-xs text-base-content/40" *ngIf="!canPlay() && isEnabled()">
+            <div *ngIf="enabledNoteCount() === 0 && enabledControlCount() === 0">
+                No enabled notes or controls
+            </div>
+            <div *ngIf="!canPlay() && (enabledNoteCount() > 0 || enabledControlCount() > 0)">
+                MIDI not connected
+            </div>
+        </div>
+    </div>
+</div>
